@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  vault:
+    image: vault:1.13.3
+    container_name: vault
+    ports:
+      - "8200:8200"
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: root
+      VAULT_DEV_LISTEN_ADDRESS: "0.0.0.0:8200"
+    volumes:
+      - vault_data:/vault/data
+    networks:
+      - app-network
+
+  postgres:
+    image: postgres:latest
+    container_name: postgres
+    environment:
+      POSTGRES_DB: wishlist_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/postgres-init.sh:/docker-entrypoint-initdb.d/init.sh:ro
+    networks:
+      - app-network
+
+  dockerize:
+    build:
+      context: ./scripts
+    container_name: dockerize
+    environment:
+      VAULT_ADDR: http://vault:8200
+      VAULT_TOKEN: root
+    entrypoint: ["/bin/sh", "-c", "/scripts/dockerize-init.sh"]
+    volumes:
+      - ./scripts:/scripts
+    depends_on:
+      - vault
+      - postgres
+    networks:
+      - app-network
+
+networks:
+  app-network:
+
+volumes:
+  vault_data:
+  postgres_data:
